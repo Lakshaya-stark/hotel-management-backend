@@ -32,7 +32,7 @@ public class BookingService {
         this.hotelRepository = hotelRepository;
     }
 
-    public Booking createBooking(BookingRequest request) {
+    public Booking createBooking(BookingRequest request, String userEmail) {
         validateRequest(request);
 
         String hotelId = request.getHotelId().trim();
@@ -41,9 +41,10 @@ public class BookingService {
                 .filter(Hotel::isActive)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
-                        "Hotel not found or inactive"));
+                        "Hotel not found or inactive"
+                ));
 
-        List<Booking> overlappingBookings =
+        List<Booking> overlaps =
                 bookingRepository
                         .findByHotelIdAndStatusInAndCheckInBeforeAndCheckOutAfter(
                                 hotelId,
@@ -52,10 +53,10 @@ public class BookingService {
                                 request.getCheckIn()
                         );
 
-        if (!overlappingBookings.isEmpty()) {
+        if (!overlaps.isEmpty()) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
-                    "These dates are unavailable for this hotel. Please choose different dates."
+                    "These dates are unavailable. Choose different dates."
             );
         }
 
@@ -68,7 +69,7 @@ public class BookingService {
         booking.setHotelId(hotel.getId());
         booking.setHotelName(hotel.getName());
         booking.setGuestName(request.getGuestName().trim());
-        booking.setGuestEmail(request.getGuestEmail().trim());
+        booking.setGuestEmail(userEmail.trim().toLowerCase());
         booking.setCheckIn(request.getCheckIn());
         booking.setCheckOut(request.getCheckOut());
         booking.setGuests(request.getGuests());
@@ -79,15 +80,55 @@ public class BookingService {
         return bookingRepository.save(booking);
     }
 
-    public List<Booking> getBookingsByEmail(String email) {
-        if (email == null || email.isBlank()) {
+    public List<Booking> getMyBookings(String userEmail) {
+        return bookingRepository
+                .findByGuestEmailIgnoreCaseOrderByCreatedAtDesc(userEmail);
+    }
+
+    public Booking getMyBooking(String bookingId, String userEmail) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Booking not found"
+                ));
+
+        if (!booking.getGuestEmail().equalsIgnoreCase(userEmail)) {
             throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Email is required"
+                    HttpStatus.NOT_FOUND,
+                    "Booking not found"
             );
         }
 
-        return bookingRepository.findByGuestEmailIgnoreCase(email.trim());
+        return booking;
+    }
+
+    public Booking cancelBooking(String bookingId, String userEmail) {
+        Booking booking = getMyBooking(bookingId, userEmail);
+
+        if ("CANCELLED".equalsIgnoreCase(booking.getStatus())) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "This booking is already cancelled"
+            );
+        }
+
+        if (booking.getCheckIn().isBefore(LocalDate.now()) ||
+                booking.getCheckIn().isEqual(LocalDate.now())) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Bookings cannot be cancelled on or after check-in"
+            );
+        }
+
+        if (!ACTIVE_STATUSES.contains(booking.getStatus())) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "This booking cannot be cancelled"
+            );
+        }
+
+        booking.setStatus("CANCELLED");
+        return bookingRepository.save(booking);
     }
 
     private void validateRequest(BookingRequest request) {
