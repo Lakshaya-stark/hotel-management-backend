@@ -11,7 +11,7 @@ public class Booking {
 
     @Id
     private String id;
-
+    private String roomId;
     private String hotelId;
     private String hotelName;
     private String guestName;
@@ -22,6 +22,15 @@ public class Booking {
     private double totalPrice;
     private String status;
     private LocalDateTime createdAt;
+
+
+    public String getRoomId() {
+    return roomId;
+}
+
+public void setRoomId(String roomId) {
+    this.roomId = roomId;
+}
 
     public Booking() {
     }

@@ -8,10 +8,18 @@ import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 
-public interface BookingRepository extends MongoRepository<Booking, String> {
+public interface BookingRepository
+        extends MongoRepository<Booking, String> {
 
     List<Booking> findByGuestEmailIgnoreCaseOrderByCreatedAtDesc(
             String guestEmail
+    );
+
+    List<Booking> findByRoomIdAndStatusInAndCheckInLessThanAndCheckOutGreaterThan(
+            String roomId,
+            List<String> statuses,
+            LocalDate requestedCheckOut,
+            LocalDate requestedCheckIn
     );
 
     List<Booking> findByHotelId(String hotelId);

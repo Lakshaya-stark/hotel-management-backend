@@ -13,11 +13,14 @@ import java.time.LocalDate;
 
 public class BookingRequest {
 
-    @NotBlank(message = "Hotel ID is required")
+    @NotBlank(message = "Room ID is required")
+    private String roomId;
+
     private String hotelId;
 
     @NotBlank(message = "Guest name is required")
-    @Size(min = 2, max = 100, message = "Guest name must be between 2 and 100 characters")
+    @Size(min = 2, max = 100,
+            message = "Guest name must be between 2 and 100 characters")
     private String guestName;
 
     @NotBlank(message = "Email is required")
@@ -35,6 +38,14 @@ public class BookingRequest {
     @Min(value = 1, message = "At least one guest is required")
     @Max(value = 20, message = "A maximum of 20 guests is allowed")
     private int guests;
+
+    public String getRoomId() {
+        return roomId;
+    }
+
+    public void setRoomId(String roomId) {
+        this.roomId = roomId;
+    }
 
     public String getHotelId() {
         return hotelId;
